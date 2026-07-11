@@ -1,0 +1,7 @@
+venv
+__pycache__
+.pytest_cache
+*.pyc
+medical_document.db
+storage
+logs

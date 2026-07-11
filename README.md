@@ -1,43 +1,58 @@
-# Medical Document Review Platform
+# Medical Document Review
 
-## Overview
-
-An AI-powered Medical Document Review Platform that evaluates medical documents using MedGemma through the Bifrost API.
+Full-stack FastAPI and Next.js application for medical document upload, AI extraction, human review, metadata tracking, and export.
 
 ## Supported Documents
 
-### Prescription
+- Prescription image, text, and multi-page PDF
+- X-ray image
+- X-ray image-only multi-page PDF
+- X-ray report text and multi-page report PDF
 
-- Prescription Image
-- Prescription PDF
-- Prescription Text
+## Architecture
 
-### X-ray
+- `backend/`: FastAPI, SQLite, SQLAlchemy, Alembic, storage, preprocessing, MedGemma/Bifrost integration, parsing, review, metadata, export
+- `frontend/`: Next.js, React, TypeScript, Tailwind CSS, React Query, Axios, Zustand, React Hook Form, Zod
+- `docs/`: architecture, API, database, workflow, deployment notes
+- `diagrams/`: architecture, API, database, workflow diagrams
 
-- X-ray Image
-- X-ray Report PDF
-- X-ray Report Text
+## Run Locally
 
-## Tech Stack
+Backend:
 
-### Backend
+```powershell
+cd backend
+.\venv\Scripts\python.exe -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
 
-- FastAPI
-- SQLAlchemy
-- SQLite
-- Alembic
+Frontend:
 
-### Frontend
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-- Next.js
-- React
-- Tailwind CSS
+Open `http://localhost:3000`.
 
-### AI
+## Docker
 
-- MedGemma
-- Bifrost API
+```powershell
+docker compose up --build
+```
 
-## Status
+## Backend Tests
 
-🚧 Project Planning
+```powershell
+cd backend
+.\venv\Scripts\python.exe -m pytest -q
+```
+
+## Important Workflow
+
+1. Upload a prescription or X-ray document.
+2. The backend validates and preprocesses the file.
+3. Extraction sends the correct prompt and image/text payload to MedGemma/Bifrost.
+4. The parser validates structured JSON.
+5. A reviewer edits, approves, rejects, or requests changes.
+6. Reviewed records can be exported as JSON or CSV.
