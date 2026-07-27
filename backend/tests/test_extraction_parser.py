@@ -381,3 +381,41 @@ def test_validate_and_merge_lab_reports():
     assert len(lft_panel["tests"]) == 1
     assert lft_panel["tests"][0]["test_name"] == "SGOT"
 
+
+def test_validate_lab_report_robustness():
+    result = AIResponseParser.validate(
+        """
+        {
+          "schema_version": "lab_v1.0",
+          "laboratory": "Central Diagnostic Lab",
+          "patient": "Jane Smith",
+          "panels": [
+            "Quick Panel",
+            {
+              "panel_name": "CBC",
+              "tests": [
+                "Hemoglobin",
+                { "test_name": "Platelets", "result": "250", "flag": "Normal" }
+              ]
+            }
+          ]
+        }
+        """,
+        "lab_report",
+        "image"
+    )
+
+    assert result["laboratory"]["name"] == "Central Diagnostic Lab"
+    assert result["patient"]["name"] == "Jane Smith"
+    assert len(result["panels"]) == 2
+    assert result["panels"][0]["panel_name"] == "Quick Panel"
+    assert result["panels"][0]["tests"] == []
+    
+    cbc = result["panels"][1]
+    assert cbc["panel_name"] == "CBC"
+    assert len(cbc["tests"]) == 2
+    assert cbc["tests"][0]["test_name"] == "Hemoglobin"
+    assert cbc["tests"][1]["test_name"] == "Platelets"
+    assert cbc["tests"][1]["result"] == "250"
+
+

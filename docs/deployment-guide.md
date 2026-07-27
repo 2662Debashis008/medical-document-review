@@ -25,8 +25,8 @@ Create `backend/.env` with:
 
 ```env
 DATABASE_URL=sqlite:///./medical_document.db
-MEDGEMMA_API_URL=https://your-bifrost-endpoint
-MEDGEMMA_API_KEY=your-api-key
+MEDGEMMA_API_URL=http://localhost:11434/v1/chat/completions
+MEDGEMMA_API_KEY=ollama
 MODEL_NAME=medgemma:4b
 ```
 
@@ -43,7 +43,7 @@ Backend runs on `http://localhost:8000`; frontend runs on `http://localhost:3000
 ## Known Limitations
 
 - X-ray PDF routing is automatic: PDFs with embedded text use the report prompt, image-only PDFs use page-by-page X-ray image extraction.
-- MedGemma/Bifrost must return JSON compatible with the schemas in `backend/schemas/workflow.py`.
+- MedGemma (local Ollama instance) must return JSON compatible with the schemas in `backend/schemas/workflow.py`.
 - SQLite is suitable for this local workflow; move to a server database before multi-user production deployment.
 
 ## Future Azure Foundry Notes

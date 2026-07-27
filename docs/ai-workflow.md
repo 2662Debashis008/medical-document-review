@@ -10,7 +10,7 @@ Image/PDF Processing
 Select Prompt
         │
         ▼
-MedGemma (Bifrost API)
+MedGemma (Local Ollama)
         │
         ▼
 Structured JSON

@@ -11,7 +11,7 @@ Full-stack FastAPI and Next.js application for medical document upload, AI extra
 
 ## Architecture
 
-- `backend/`: FastAPI, SQLite, SQLAlchemy, Alembic, storage, preprocessing, MedGemma/Bifrost integration, parsing, review, metadata, export
+- `backend/`: FastAPI, SQLite, SQLAlchemy, Alembic, storage, preprocessing, MedGemma Local (Ollama) integration, parsing, review, metadata, export
 - `frontend/`: Next.js, React, TypeScript, Tailwind CSS, React Query, Axios, Zustand, React Hook Form, Zod
 - `docs/`: architecture, API, database, workflow, deployment notes
 - `diagrams/`: architecture, API, database, workflow diagrams
@@ -52,7 +52,7 @@ cd backend
 
 1. Upload a prescription or X-ray document.
 2. The backend validates and preprocesses the file.
-3. Extraction sends the correct prompt and image/text payload to MedGemma/Bifrost.
+3. Extraction sends the correct prompt and image/text payload to MedGemma (local Ollama instance).
 4. The parser validates structured JSON.
 5. A reviewer edits, approves, rejects, or requests changes.
 6. Reviewed records can be exported as JSON or CSV.

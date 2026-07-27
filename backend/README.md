@@ -24,8 +24,8 @@ DEBUG=False
 HOST=127.0.0.1
 PORT=8000
 DATABASE_URL=sqlite:///./medical_document.db
-MEDGEMMA_API_URL=https://your-bifrost-host/v1/chat/completions
-MEDGEMMA_API_KEY=replace-me
+MEDGEMMA_API_URL=http://localhost:11434/v1/chat/completions
+MEDGEMMA_API_KEY=ollama
 MODEL_NAME=medgemma:4b
 LOG_LEVEL=INFO
 ```
@@ -45,7 +45,7 @@ flowchart LR
     API --> Upload[Upload Service]
     Upload --> Storage[Storage Service]
     Upload --> Preprocess[Image/PDF/Text Preprocessing]
-    Preprocess --> MedGemma[MedGemma Bifrost Provider]
+    Preprocess --> MedGemma[MedGemma Local Provider]
     MedGemma --> Parser[Response Parser + Pydantic Validation]
     Parser --> DB[(SQLite + SQLAlchemy)]
     API --> Review[Human Review Service]
@@ -89,7 +89,7 @@ The app calls `ensure_schema()` on startup so local SQLite databases receive mis
 4. PDFs are rendered with PyMuPDF into per-page images, then each page is processed.
 5. Text files are copied into processed text storage.
 6. Prompt is selected from `backend/prompts`.
-7. MedGemma Bifrost receives text and/or processed images.
+7. Local Ollama MedGemma receives text and/or processed images.
 8. Response is parsed as JSON and validated with Pydantic.
 9. Extraction, medications, document status, and run metadata are saved.
 
@@ -103,4 +103,4 @@ Reviewers fetch the original document metadata and extracted JSON, submit edited
 backend\venv\Scripts\python.exe -m pytest backend\tests -q
 ```
 
-Current tests cover image/PDF preprocessing with generated temporary fixtures. Add provider tests with a mocked `MedGemmaProvider` before using CI against a live Bifrost endpoint.
+Current tests cover image/PDF preprocessing with generated temporary fixtures. Add provider tests with a mocked `MedGemmaProvider` to verify integration behavior.

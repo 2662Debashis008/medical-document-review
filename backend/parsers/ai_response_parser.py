@@ -280,11 +280,40 @@ class AIResponseParser:
             "report_date": "",
             "panels": [],
         }
+
+        # Pre-process raw string structures to avoid validation crashes
+        if "laboratory" in parsed and isinstance(parsed["laboratory"], str):
+            parsed["laboratory"] = {"name": parsed["laboratory"]}
+        if "patient" in parsed and isinstance(parsed["patient"], str):
+            parsed["patient"] = {"name": parsed["patient"]}
+
         normalized = cls._deep_merge(defaults, parsed)
-        normalized["panels"] = cls._list_or_empty(normalized.get("panels"))
-        for panel in normalized["panels"]:
-            if isinstance(panel, dict):
-                panel["tests"] = cls._list_or_empty(panel.get("tests"))
+        raw_panels = cls._list_or_empty(normalized.get("panels"))
+        cleaned_panels = []
+        for panel in raw_panels:
+            if isinstance(panel, str):
+                cleaned_panels.append({
+                    "panel_name": panel,
+                    "tests": []
+                })
+            elif isinstance(panel, dict):
+                raw_tests = cls._list_or_empty(panel.get("tests"))
+                cleaned_tests = []
+                for test in raw_tests:
+                    if isinstance(test, str):
+                        cleaned_tests.append({
+                            "test_name": test,
+                            "result": "",
+                            "unit": "",
+                            "reference_range": "",
+                            "flag": ""
+                        })
+                    elif isinstance(test, dict):
+                        cleaned_tests.append(test)
+                panel["tests"] = cleaned_tests
+                cleaned_panels.append(panel)
+        normalized["panels"] = cleaned_panels
+
         return LabReportExtraction.model_validate(normalized).model_dump()
 
     @staticmethod

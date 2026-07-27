@@ -733,7 +733,7 @@ class ExtractionService:
 
         metadata.model_name = provider_metadata.get("model") or settings.MODEL_NAME
         metadata.model_version = provider_metadata.get("model_version")
-        metadata.runtime = "bifrost"
+        metadata.runtime = "ollama"
         metadata.prompt_version = prompt_version
         metadata.latency = provider_metadata.get("latency")
         metadata.processing_time = processing_time
