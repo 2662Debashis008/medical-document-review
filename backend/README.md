@@ -25,7 +25,6 @@ HOST=127.0.0.1
 PORT=8000
 DATABASE_URL=sqlite:///./medical_document.db
 MEDGEMMA_API_URL=http://localhost:11434/v1/chat/completions
-MEDGEMMA_API_KEY=ollama
 MODEL_NAME=medgemma:4b
 LOG_LEVEL=INFO
 ```

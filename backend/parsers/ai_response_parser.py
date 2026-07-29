@@ -23,14 +23,76 @@ class AIResponseParser:
             parsed = json.loads(text)
         except json.JSONDecodeError:
             match = re.search(r"\{.*\}", text, flags=re.DOTALL)
-            if not match:
-                raise ValueError("AI response did not contain JSON")
-            parsed = json.loads(match.group(0))
+            if match:
+                try:
+                    parsed = json.loads(match.group(0))
+                except json.JSONDecodeError:
+                    parsed = AIResponseParser._repair_and_parse_json(text)
+            else:
+                parsed = AIResponseParser._repair_and_parse_json(text)
 
         if not isinstance(parsed, dict):
             raise ValueError("AI response JSON must be an object")
 
         return parsed
+
+    @staticmethod
+    def _repair_and_parse_json(text: str) -> dict[str, Any]:
+        match = re.search(r"\{.*", text, flags=re.DOTALL)
+        if not match:
+            raise ValueError("AI response did not contain JSON")
+        snippet = match.group(0)
+
+        in_string = False
+        escape = False
+        stack = []
+        fixed_chars = []
+
+        for char in snippet:
+            if escape:
+                escape = False
+                fixed_chars.append(char)
+                continue
+            if char == "\\":
+                escape = True
+                fixed_chars.append(char)
+                continue
+            if char == '"':
+                in_string = not in_string
+                fixed_chars.append(char)
+                continue
+            if not in_string:
+                if char in "{[":
+                    stack.append(char)
+                elif char == "}":
+                    if stack and stack[-1] == "{":
+                        stack.pop()
+                elif char == "]":
+                    if stack and stack[-1] == "[":
+                        stack.pop()
+            fixed_chars.append(char)
+
+        if in_string:
+            fixed_chars.append('"')
+
+        candidate = "".join(fixed_chars).rstrip()
+        candidate = re.sub(r",\s*$", "", candidate)
+
+        while stack:
+            top = stack.pop()
+            if top == "{":
+                candidate += "}"
+            elif top == "[":
+                candidate += "]"
+
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+        raise ValueError(f"Could not parse AI JSON response: {text[:150]}")
 
     @classmethod
     def validate(cls, raw_text: str, document_category: str, file_type: str) -> dict[str, Any]:

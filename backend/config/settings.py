@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./medical_document.db"
 
     MEDGEMMA_API_URL: str = ""
-    MEDGEMMA_API_KEY: str = ""
     MODEL_NAME: str = "medgemma:4b"
+    MEDGEMMA_READ_TIMEOUT_SECONDS: float = 240.0
+    MEDGEMMA_MAX_TOKENS: int = 1024
 
     LOG_LEVEL: str = "INFO"
 

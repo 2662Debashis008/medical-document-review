@@ -7,12 +7,8 @@ class PromptService:
 
     DEFAULT_PROMPTS = {
         "prescription_prompt.txt": (
-            "You are an expert medical prescription extraction assistant. Return ONLY "
-            'one JSON object using schema_version "v2.0" with document_facility, '
-            "patient, vitals_anthropometry, history_presenting_complaints_facts, "
-            "examination_facts, investigations_facts, medications_facts, "
-            "advice_plan_facts, interpretation_inferences, "
-            "uncertain_or_illegible_segments, provenance, and admin."
+            "Extract a prescription into compact JSON with patient_name, age, gender, "
+            "doctor_name, date, medications, and uncertainty_notes. Return JSON only."
         ),
         "xray_image_prompt.txt": (
             "Analyze the X-ray image and return ONLY one JSON object using "

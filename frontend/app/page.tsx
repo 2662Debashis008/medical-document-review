@@ -527,19 +527,19 @@ function ReviewPanel({
   const extractionQuery = useQuery({
     queryKey: ["extraction", document?.id],
     queryFn: () => getExtraction(document!.id),
-    enabled: Boolean(document?.id),
+    enabled: document?.status === "processed",
     retry: 0,
   });
   const reviewQuery = useQuery({
     queryKey: ["review", document?.id],
     queryFn: () => getReview(document!.id),
-    enabled: Boolean(document?.id),
+    enabled: document?.status === "processed",
     retry: 0,
   });
   const metadataQuery = useQuery({
     queryKey: ["metadata", document?.id],
     queryFn: () => getMetadata(document!.id),
-    enabled: Boolean(document?.id),
+    enabled: document?.status === "processed" || document?.status === "failed",
     retry: 0,
   });
 

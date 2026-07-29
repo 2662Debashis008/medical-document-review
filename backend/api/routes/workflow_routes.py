@@ -15,6 +15,7 @@ from services.export_service import ExportService
 from services.extraction_service import ExtractionService
 from services.metadata_service import MetadataService
 from services.review_service import ReviewService
+from providers.medgemma_provider import MedGemmaConfigurationError
 
 
 router = APIRouter(tags=["Workflow"])
@@ -26,6 +27,8 @@ def extract_document(payload: ExtractRequest, db: Session = Depends(get_db)):
         extraction, metadata = ExtractionService.extract(db, payload.document_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except MedGemmaConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

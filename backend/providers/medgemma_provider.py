@@ -3,6 +3,7 @@ import io
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from PIL import Image, UnidentifiedImageError
@@ -10,15 +11,41 @@ from PIL import Image, UnidentifiedImageError
 from config.settings import settings
 
 
+class MedGemmaConfigurationError(RuntimeError):
+    """Raised when the configured inference endpoint cannot be used."""
+
+
 class MedGemmaProvider:
     MAX_IMAGE_BYTES = 1_500_000
-    MAX_IMAGE_SIDE = 1600
+    # Vision inference is the dominant cost on a local 4B model. Limiting the
+    # longest edge retains document layout while avoiding oversized image tokens.
+    MAX_IMAGE_SIDE = 512
 
     def __init__(self):
         self.api_url = settings.MEDGEMMA_API_URL
-        self.api_key = settings.MEDGEMMA_API_KEY
         self.model_name = settings.MODEL_NAME
-        self.timeout = 90
+        self.timeout = httpx.Timeout(
+            connect=10.0,
+            read=settings.MEDGEMMA_READ_TIMEOUT_SECONDS,
+            write=30.0,
+            pool=10.0,
+        )
+        self._validate_configuration()
+
+    def _validate_configuration(self) -> None:
+        parsed = urlparse(self.api_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise MedGemmaConfigurationError(
+                "MEDGEMMA_API_URL must be a full HTTP(S) URL, for example "
+                "http://localhost:11434/v1/chat/completions."
+            )
+        if parsed.scheme == "https" and parsed.hostname in {"localhost", "127.0.0.1"} and parsed.port == 11434:
+            raise MedGemmaConfigurationError(
+                "Ollama on port 11434 uses HTTP, not HTTPS. Set MEDGEMMA_API_URL to "
+                "http://localhost:11434/v1/chat/completions."
+            )
+        if not self.model_name.strip():
+            raise MedGemmaConfigurationError("MODEL_NAME must not be empty.")
 
     def _build_payload(self, prompt: str, input_paths: list[str], text_content: str | None):
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
@@ -40,6 +67,14 @@ class MedGemmaProvider:
             "model": self.model_name,
             "messages": [{"role": "user", "content": content}],
             "temperature": 0,
+            # A bounded response keeps local inference predictable while leaving
+            # enough room for the structured extraction schemas.
+            "max_tokens": settings.MEDGEMMA_MAX_TOKENS,
+            "keep_alive": "1h",
+            "options": {
+                "num_thread": 6,
+                "num_ctx": 4096,
+            },
         }
 
     def infer(
@@ -50,33 +85,49 @@ class MedGemmaProvider:
         max_retries: int = 2,
     ) -> tuple[str, dict[str, Any]]:
         payload = self._build_payload(prompt, input_paths, text_content)
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = {"Content-Type": "application/json"}
 
         started = time.perf_counter()
-        last_error = None
+        last_error: Exception | None = None
+        attempts_made = 0
 
-        for attempt in range(max_retries + 1):
-            try:
-                with httpx.Client(timeout=self.timeout) as client:
+        # Keep one connection for all retry attempts. This avoids repeated TCP/TLS
+        # handshakes, which is particularly noticeable while processing PDF pages.
+        with httpx.Client(timeout=self.timeout) as client:
+            for attempt in range(max_retries + 1):
+                attempts_made = attempt + 1
+                try:
                     response = client.post(self.api_url, json=payload, headers=headers)
                     response.raise_for_status()
                     data = response.json()
+                    if not isinstance(data, dict):
+                        raise RuntimeError("MedGemma returned a non-object JSON response.")
                     latency = time.perf_counter() - started
                     return self._extract_text(data), {
                         "latency": latency,
                         "model": data.get("model", self.model_name),
                         "attempts": attempt + 1,
                     }
-            except Exception as exc:
-                last_error = exc
+                except httpx.HTTPStatusError as exc:
+                    last_error = exc
+                    # Retrying client-side validation errors only adds delay. Server
+                    # failures and rate limits can be transient, so retry those.
+                    if exc.response.status_code < 500 and exc.response.status_code != 429:
+                        break
+                except httpx.TimeoutException as exc:
+                    # A completed request that exceeded its deadline will not become
+                    # faster by being immediately submitted again.
+                    last_error = exc
+                    break
+                except (httpx.HTTPError, ValueError, RuntimeError) as exc:
+                    last_error = exc
                 if attempt == max_retries:
                     break
-                time.sleep(0.75 * (attempt + 1))
+                time.sleep(0.5 * (attempt + 1))
 
-        raise RuntimeError(f"MedGemma request failed: {last_error}")
+        raise RuntimeError(
+            f"MedGemma request failed after {attempts_made} attempt(s): {last_error}"
+        )
 
     @staticmethod
     def _mime_type(path: Path) -> str:
